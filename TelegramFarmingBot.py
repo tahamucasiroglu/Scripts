@@ -5,9 +5,11 @@ import mouse
 import time
 import base64
 import threading
+import random
 
 parse = 10
 sleepTime = 0.03
+mode = "random" #"line" or "random"
 
 waitTimeIsActive = False
 waitStepTime = 60
@@ -78,16 +80,29 @@ def Click(point:tuple[int,int]):
     time.sleep(0.1)
     mouse.release()
 
-def MoveMouse(left_top:tuple[int,int],right_bottom:tuple[int,int], parseSize:int = 10, sleepTimeSize:float = 0.01 ):
+def MoveMouse(left_top:tuple[int,int],right_bottom:tuple[int,int], parseSize:int = 10, sleepTimeSize:float = 0.01, modeStatus:str = "line" or "random"):
 
-    XList, XListReverse, YList, YListReverse = MakeList(left_top, right_bottom, parseSize)
+    if modeStatus == "line":
+        XList, XListReverse, YList, YListReverse = MakeList(left_top, right_bottom, parseSize)
+        while True:
+            Click(((left_top[0]+right_bottom[0])//2,(left_top[1]+right_bottom[1])//2))
+            VerticalMover(YList, XList, XListReverse, sleepTimeSize)
+            VerticalMover(YListReverse, XList, XListReverse, sleepTimeSize)
+            if GetStatus():
+                break
+    elif modeStatus == "random":
+        while True:
+            if GetStatus():
+                break
+            Click(((left_top[0]+right_bottom[0])//2,(left_top[1]+right_bottom[1])//2))
+            for i in range(parseSize):
+                if GetStatus():
+                    break
+                x = random.randint(left_top[0], right_bottom[0])
+                y = random.randint(left_top[1], right_bottom[1])
+                mouse.move(x, y)
+                time.sleep(0.1)
 
-    while True:
-        Click(((left_top[0]+right_bottom[0])//2,(left_top[1]+right_bottom[1])//2))
-        VerticalMover(YList, XList, XListReverse, sleepTimeSize)
-        VerticalMover(YListReverse, XList, XListReverse, sleepTimeSize)
-        if GetStatus():
-            break
 
 def WaitTimeHandler():
     global waitTimeIsActive
@@ -107,12 +122,13 @@ if __name__ == "__main__":
     WelcomeText()
     print("\n'S' => Start\n'P' => Pause\n'E' => Exit")
     lt, rb = GetCoordinates()
-    WaitTimeThread = threading.Thread(target= WaitTimeHandler, daemon=True)
-    WaitTimeThread.start()
+    if waitStepTime != 0 and waitTime != 0:
+        WaitTimeThread = threading.Thread(target= WaitTimeHandler, daemon=True)
+        WaitTimeThread.start()
     while True:
         time.sleep(0.1)
         if keyboard.is_pressed('s'):
-            MoveMouse(lt, rb, parse, sleepTime)
+            MoveMouse(lt, rb, parse, sleepTime, mode)
         if keyboard.is_pressed('e'):
             break
 
