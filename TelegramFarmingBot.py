@@ -11,7 +11,7 @@ sleepTime = 0.03
 
 waitTimeIsActive = False
 waitStepTime = 60
-waitTime = 600
+waitTime = 300
 
 def WelcomeText():    
     # not to be searched
@@ -58,7 +58,7 @@ def MakeList(left_top:tuple[int,int],right_bottom:tuple[int,int], parseSize:int 
 
     return XList, XListReverse, YList, YListReverse
 
-def HorizontalClicker(Y:int, X:list[int], sleepTimeSize:float = 0.01):
+def HorizontalMover(Y:int, X:list[int], sleepTimeSize:float = 0.01):
     global waitTimeIsActive
     if waitTimeIsActive:
         time.sleep(waitTime)
@@ -66,19 +66,26 @@ def HorizontalClicker(Y:int, X:list[int], sleepTimeSize:float = 0.01):
         mouse.move(X, Y)
         time.sleep(sleepTimeSize)
 
-def VerticalClicker(YList:list[int], XList:list[int], XListReverse:list[int], sleepTimeSize:float = 0.01):
+def VerticalMover(YList:list[int], XList:list[int], XListReverse:list[int], sleepTimeSize:float = 0.01):
     for i,Y in enumerate(YList):
-        HorizontalClicker(Y, XList, sleepTimeSize) if i % 2 == 0 else HorizontalClicker(Y, XListReverse, sleepTimeSize)
+        HorizontalMover(Y, XList, sleepTimeSize) if i % 2 == 0 else HorizontalMover(Y, XListReverse, sleepTimeSize)
         if GetStatus():
             break
+
+def Click(point:tuple[int,int]):
+    mouse.move(point[0], point[1])
+    mouse.click()
+    time.sleep(0.1)
+    mouse.release()
 
 def MoveMouse(left_top:tuple[int,int],right_bottom:tuple[int,int], parseSize:int = 10, sleepTimeSize:float = 0.01 ):
 
     XList, XListReverse, YList, YListReverse = MakeList(left_top, right_bottom, parseSize)
 
     while True:
-        VerticalClicker(YList, XList, XListReverse, sleepTimeSize)
-        VerticalClicker(YListReverse, XList, XListReverse, sleepTimeSize)
+        Click(((left_top[0]+right_bottom[0])//2,(left_top[1]+right_bottom[1])//2))
+        VerticalMover(YList, XList, XListReverse, sleepTimeSize)
+        VerticalMover(YListReverse, XList, XListReverse, sleepTimeSize)
         if GetStatus():
             break
 
