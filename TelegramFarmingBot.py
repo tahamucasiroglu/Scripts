@@ -9,11 +9,11 @@ import random
 
 parse = 10
 sleepTime = 0.03
-mode = "random" #"line" or "random"
+mode = "line" #"line" or "random"
 
 waitTimeIsActive = False
-waitStepTime = 60
-waitTime = 300
+waitStepTime = 0
+waitTime = 0
 
 def WelcomeText():    
     # not to be searched
@@ -77,7 +77,7 @@ def VerticalMover(YList:list[int], XList:list[int], XListReverse:list[int], slee
 def Click(point:tuple[int,int]):
     mouse.move(point[0], point[1])
     mouse.click()
-    time.sleep(0.1)
+    time.sleep(sleepTime)
     mouse.release()
 
 def MoveMouse(left_top:tuple[int,int],right_bottom:tuple[int,int], parseSize:int = 10, sleepTimeSize:float = 0.01, modeStatus:str = "line" or "random"):
@@ -101,7 +101,7 @@ def MoveMouse(left_top:tuple[int,int],right_bottom:tuple[int,int], parseSize:int
                 x = random.randint(left_top[0], right_bottom[0])
                 y = random.randint(left_top[1], right_bottom[1])
                 mouse.move(x, y)
-                time.sleep(0.1)
+                time.sleep(sleepTime)
 
 
 def WaitTimeHandler():
