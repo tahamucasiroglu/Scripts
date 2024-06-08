@@ -3,10 +3,15 @@ from bs4 import BeautifulSoup
 from PIL import Image, ImageTk
 from io import BytesIO
 import tkinter as tk
+import json
 
-profile_url = 'https://steamcommunity.com/profiles/76561198997983717/stats/236850/achievements/'
-general_steam_url = 'https://steamcommunity.com/stats/236850/achievements'
-wiki_url = 'https://eu4.paradoxwikis.com/Achievements'
+# %90 gpt 
+
+settingsData = json.load(open("settings.json"))["Eu4AchievementSelector"]
+
+profile_url = settingsData["my_profile_eu4_achievement_url"]
+general_steam_url = settingsData["general_eu4_achievement_steam_url"]
+wiki_url = settingsData["eu4_wiki_achievement_url"]
 
 def get_steam_achievements(profile_url):
     response = requests.get(profile_url)
@@ -35,7 +40,6 @@ def get_steam_achievements(profile_url):
 
 steam_achievements = get_steam_achievements(profile_url)
 
-# Genel Steam başarımlarını çekmek için fonksiyon
 def get_general_steam_achievements(url):
     response = requests.get(url)
     soup = BeautifulSoup(response.content, 'html.parser')
@@ -106,7 +110,6 @@ def merge_achievements(steam_achievements, general_achievements, wiki_achievemen
 
 merged_achievements = merge_achievements(steam_achievements, general_steam_achievements, wiki_achievements)
 
-# Hata ayıklama için çıktı ekleyelim
 print(f"Total Steam Achievements: {len(steam_achievements)}")
 print(f"Total General Steam Achievements: {len(general_steam_achievements)}")
 print(f"Total Wiki Achievements: {len(wiki_achievements)}")
