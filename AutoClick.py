@@ -7,6 +7,7 @@ def click_mouse():
 
 def main():
     while True:
+        time.sleep(0.1)
         if keyboard.is_pressed('shift'):
             while True:
                 click_mouse()
