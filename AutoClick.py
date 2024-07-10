@@ -12,7 +12,7 @@ def main():
             while True:
                 click_mouse()
                 time.sleep(0.05)  # İstediğiniz hızda tıklamalar için bu değeri ayarlayabilirsiniz
-                if keyboard.is_pressed('space'):
+                if keyboard.is_pressed('alt'):
                     break
 
 if __name__ == "__main__":
