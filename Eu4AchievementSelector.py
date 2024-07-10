@@ -4,14 +4,8 @@ from PIL import Image, ImageTk
 from io import BytesIO
 import tkinter as tk
 import json
+import random
 
-# %90 gpt 
-
-settingsData = json.load(open("settings.json"))["Eu4AchievementSelector"]
-
-profile_url = settingsData["my_profile_eu4_achievement_url"]
-general_steam_url = settingsData["general_eu4_achievement_steam_url"]
-wiki_url = settingsData["eu4_wiki_achievement_url"]
 
 def get_steam_achievements(profile_url):
     response = requests.get(profile_url)
@@ -38,7 +32,6 @@ def get_steam_achievements(profile_url):
 
     return achievements
 
-steam_achievements = get_steam_achievements(profile_url)
 
 def get_general_steam_achievements(url):
     response = requests.get(url)
@@ -61,59 +54,77 @@ def get_general_steam_achievements(url):
 
     return achievements
 
-general_steam_achievements = get_general_steam_achievements(general_steam_url)
 
 def get_wiki_achievements(url):
     response = requests.get(url)
     soup = BeautifulSoup(response.content, 'html.parser')
-    achievement_rows = soup.select('table.wikitable tr')
+    achievement_tables = soup.select('table.sortable')
 
     achievements = []
 
-    for row in achievement_rows[1:]:  
-        cols = row.find_all('td')
-        if len(cols) > 3:  
-            title = cols[0].text.strip()
-            description = cols[1].text.strip()
-            version = cols[2].text.strip()
-            difficulty = cols[3].text.strip()
-            achievements.append({
-                'Title': title,
-                'Wiki Description': description,
-                'Version': version,
-                'Difficulty': difficulty
-            })
+    for table in achievement_tables:
+        rows = table.select('tbody > tr')
+
+        for row in rows:
+            cols = row.find_all('td')
+            if len(cols) >= 7: 
+                title = str(cols[0].select('div > div > div')).split('<span id')[0].split('>')[-1]
+                subTitle = str(cols[0].select('div > div > div')).split(';">')[-1].split('</div>]')[0]
+                
+                conditions = cols[1].text.strip() if cols[1].text.strip() else 'Yok'
+                requirements = [li.text.strip() for li in cols[2].find_all('li')] if cols[2].find_all('li') else [cols[2].text.strip()]
+                notes = cols[3].text.strip()
+                dlc_icons = [icon['alt'] for icon in cols[4].find_all('img')]
+                version = cols[5].text.strip()
+                difficulty = cols[6].text.strip()
+                
+
+                achievements.append({
+                    'Title': title,
+                    'SubTitle': subTitle,
+                    'Conditions': conditions,
+                    'Requirements': requirements,
+                    'Notes': notes,
+                    'DLC Icons': dlc_icons,
+                    'Version': version,
+                    'Difficulty': difficulty
+                })
 
     return achievements
 
 
-wiki_achievements = get_wiki_achievements(wiki_url)
-
-def merge_achievements(steam_achievements, general_achievements, wiki_achievements):
+def merge_achievements(steam_achievements:list, general_achievements:list, wiki_achievements:list):
     merged_achievements = []
 
     for steam_achievement in steam_achievements:
-        if not steam_achievement['Unlock Time']:  
-            general_achievement = next((ga for ga in general_achievements if ga['Title'] == steam_achievement['Title']), None)
-            wiki_achievement = next((wa for wa in wiki_achievements if wa['Title'] == steam_achievement['Title']), None)
+        if not steam_achievement['Unlock Time']:
+            general_achievement = None
+            for ga in general_achievements:
+                if ga['Title'] == steam_achievement['Title']:
+                    general_achievement = ga
+        
+            wiki_achievement = None
+            for wa in wiki_achievements:
+                if wa['Title'] == steam_achievement['Title']:
+                    wiki_achievement = wa
 
-            if general_achievement:
-                steam_achievement['Completion Percent'] = general_achievement['Completion Percent']
-            if wiki_achievement:
-                steam_achievement['Wiki Description'] = wiki_achievement['Wiki Description']
-                steam_achievement['Version'] = wiki_achievement['Version']
-                steam_achievement['Difficulty'] = wiki_achievement['Difficulty']
-
-            merged_achievements.append(steam_achievement)
-
+            merged_achievements.append({
+                'Title': steam_achievement['Title'],
+                'SubTitle': general_achievement['Description'],
+                'Conditions': wiki_achievement['Conditions'] if wiki_achievement != None else "None",
+                'Requirements': wiki_achievement['Requirements'] if wiki_achievement != None else "None",
+                'Notes': wiki_achievement['Notes'] if wiki_achievement != None else "None",
+                'DLC Icons': wiki_achievement['DLC Icons'] if wiki_achievement != None else "None",
+                'Version': wiki_achievement['Version'] if wiki_achievement != None else "None",
+                'Difficulty': wiki_achievement['Difficulty'] if wiki_achievement != None else "None",
+                'Image URL': steam_achievement['Image URL'] if steam_achievement['Image URL'] != None else general_achievement['Image URL'],
+                'Description': steam_achievement['Description'],
+                'Completion Percent': general_achievement['Completion Percent'],
+                'Image URL': steam_achievement['Image URL']
+            })
+    random.shuffle(merged_achievements)
     return merged_achievements
 
-merged_achievements = merge_achievements(steam_achievements, general_steam_achievements, wiki_achievements)
-
-print(f"Total Steam Achievements: {len(steam_achievements)}")
-print(f"Total General Steam Achievements: {len(general_steam_achievements)}")
-print(f"Total Wiki Achievements: {len(wiki_achievements)}")
-print(f"Total Merged Achievements: {len(merged_achievements)}")
 
 class AchievementApp:
     def __init__(self, root, achievements):
@@ -143,6 +154,12 @@ class AchievementApp:
         self.percent_label = tk.Label(root, text="")
         self.percent_label.pack()
 
+        self.requirements_label = tk.Label(root, text="", wraplength=400)
+        self.requirements_label.pack()
+
+        self.dlc_label = tk.Label(root, text="", wraplength=400)
+        self.dlc_label.pack()
+
         self.complete_button = tk.Button(root, text="Tamam", command=root.quit)
         self.complete_button.pack(side=tk.LEFT)
 
@@ -166,18 +183,43 @@ class AchievementApp:
 
         self.title_label.config(text=achievement['Title'])
         self.description_label.config(text=achievement['Description'])
-        self.wiki_description_label.config(text=f"Wiki Description: {achievement.get('Wiki Description', 'No description available')}")
+        self.wiki_description_label.config(text=f"Conditions: {achievement.get('Conditions', 'No conditions available')}")
         self.difficulty_label.config(text=f"Difficulty: {achievement.get('Difficulty', 'Unknown')}")
         self.version_label.config(text=f"Added in Version: {achievement.get('Version', 'Unknown')}")
         self.percent_label.config(text=f"Completion Percent: {achievement.get('Completion Percent', 'Unknown')}")
+
+        requirements_text = ', '.join(achievement.get('Requirements', []))
+        dlc_text = ', '.join(achievement.get('DLC Icons', []))
+        self.requirements_label.config(text=f"Requirements: {requirements_text}")
+        self.dlc_label.config(text=f"Required DLCs: {dlc_text}")
 
     def next_achievement(self):
         self.index = (self.index + 1) % self.total
         self.show_achievement()
 
+
+# %80 gpt
+
+settingsData = json.load(open("settings.json"))["Eu4AchievementSelector"]
+
+profile_url = settingsData["my_profile_eu4_achievement_url"]
+general_steam_url = settingsData["general_eu4_achievement_steam_url"]
+wiki_url = settingsData["eu4_wiki_achievement_url"]
+
+general_steam_achievements = get_general_steam_achievements(general_steam_url)
+wiki_achievements = get_wiki_achievements(wiki_url)
+steam_achievements = get_steam_achievements(profile_url)
+
+merged_achievements = merge_achievements(steam_achievements, general_steam_achievements, wiki_achievements)
+
+print(f"Total Steam Achievements: {len(steam_achievements)}")
+print(f"Total General Steam Achievements: {len(general_steam_achievements)}")
+print(f"Total Wiki Achievements: {len(wiki_achievements)}")
+print(f"Total Merged Achievements: {len(merged_achievements)}")
+
 root = tk.Tk()
 root.title("EU4 Achievements")
-root.geometry('600x300')
+root.geometry('600x400')
 app = AchievementApp(root, merged_achievements)
 
 root.mainloop()
