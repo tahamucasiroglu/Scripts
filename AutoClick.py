@@ -11,7 +11,8 @@ def main():
         if keyboard.is_pressed('shift'):
             while True:
                 click_mouse()
-                time.sleep(0.05)  # İstediğiniz hızda tıklamalar için bu değeri ayarlayabilirsiniz
+                #time.sleep(0.05)  # İstediğiniz hızda tıklamalar için bu değeri ayarlayabilirsiniz
+                time.sleep(3)
                 if keyboard.is_pressed('alt'):
                     break
 
