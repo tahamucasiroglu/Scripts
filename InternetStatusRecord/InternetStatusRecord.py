@@ -25,12 +25,12 @@ def check_internet():
 
 def save_full_log():
     """full_log listesini FULL_LOG_FILE dosyasına yazar."""
-    with open(FULL_LOG_FILE, "w", encoding="utf-8") as f:
+    with open(FULL_LOG_FILE, "w+", encoding="utf-8") as f:
         json.dump(full_log, f, indent=2, ensure_ascii=False)
 
 def save_intervals():
     """intervals listesini INTERVALS_FILE dosyasına yazar."""
-    with open(INTERVALS_FILE, "w", encoding="utf-8") as f:
+    with open(INTERVALS_FILE, "w+", encoding="utf-8") as f:
         json.dump(intervals, f, indent=2, ensure_ascii=False)
 
 print("Başlatılıyor: İnternet bağlantısı izleniyor. Çıkmak için Ctrl+C tuşuna basınız.")
