@@ -1,0 +1,6 @@
+# VideoConverter Bağımlılıkları
+# FFmpeg sisteme kurulu olmalıdır: sudo apt install ffmpeg
+# veya Windows: https://ffmpeg.org/download.html
+
+# Tkinter Python ile birlikte gelir (python3-tk paketi gerekebilir)
+# Ubuntu/Debian: sudo apt install python3-tk
