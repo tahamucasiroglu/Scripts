@@ -1,0 +1,16 @@
+{
+  "presets": {
+    "MP4 Donustur (CPU - Dengeli JSON)": {
+      "description": "JSON ile eklenmis dengeli MP4 profili",
+      "category": "video",
+      "input_formats": ["*"],
+      "output_format": ".mp4",
+      "vcodec": "libx264",
+      "acodec": "aac",
+      "bitrate": "6000k",
+      "audio_bitrate": "192k",
+      "preset": "medium",
+      "gpu": false
+    }
+  }
+}

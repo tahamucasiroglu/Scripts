@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-VideoConverter - Kapsamli Video Donusturucu
+TM Video Converter - Kapsamli Video Donusturucu
 Python + Tkinter ile gelistirilmis, FFmpeg tabanli video donusturme araci.
 NVIDIA NVENC GPU hizlandirma destekli.
 """

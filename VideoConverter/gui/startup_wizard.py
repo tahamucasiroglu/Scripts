@@ -18,7 +18,7 @@ class StartupWizard:
         self.cancelled = False
 
         self.root = tk.Tk()
-        self.root.title("VideoConverter")
+        self.root.title("TM Video Converter")
         self.root.geometry("450x300")
         self.root.resizable(False, False)
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
@@ -44,7 +44,7 @@ class StartupWizard:
         # Başlık
         ttk.Label(
             main_frame,
-            text="VideoConverter",
+            text="TM Video Converter",
             font=("", 16, "bold")
         ).pack(pady=(0, 5))
 

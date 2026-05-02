@@ -1,0 +1,16 @@
+{
+  "app_title": "TM Video Converter",
+  "app_subtitle": "Taha Mucasiroglu Video Converter",
+  "ready": "Ready",
+  "language": "Language",
+  "converting": "Converting...",
+  "encoding": "Encoding...",
+  "batch_running": "Batch conversion is running...",
+  "batch_complete_title": "Batch Conversion",
+  "batch_complete": "Batch conversion completed.",
+  "success": "Successful",
+  "failed": "Failed",
+  "cancelled": "Cancelled",
+  "select_valid_source": "Select a valid source video!",
+  "select_output_dir": "Select an output folder!"
+}

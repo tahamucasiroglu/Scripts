@@ -1,0 +1,16 @@
+{
+  "app_title": "TM Video Converter",
+  "app_subtitle": "Taha Mücasiroğlu Video Converter",
+  "ready": "Hazır",
+  "language": "Dil",
+  "converting": "Dönüştürülüyor...",
+  "encoding": "Kodlanıyor...",
+  "batch_running": "Toplu dönüştürme çalışıyor...",
+  "batch_complete_title": "Toplu Dönüştürme",
+  "batch_complete": "Toplu dönüştürme tamamlandı.",
+  "success": "Başarılı",
+  "failed": "Hatalı",
+  "cancelled": "İptal",
+  "select_valid_source": "Geçerli bir kaynak video seçin!",
+  "select_output_dir": "Çıktı klasörü seçin!"
+}

@@ -186,6 +186,7 @@ class ProgressDialog(tk.Toplevel):
 
     def set_complete(self):
         """Tamamlandı durumu"""
+        self.grab_release()
         self.progress_var.set(100)
         self.percent_label.config(text="100%")
         self.status_label.config(text="Tamamlandı!", foreground="green")
@@ -193,6 +194,7 @@ class ProgressDialog(tk.Toplevel):
 
     def set_error(self, message: str):
         """Hata durumu"""
+        self.grab_release()
         self.status_label.config(text=f"Hata: {message}", foreground="red")
         self.cancel_btn.config(text="Kapat", command=self.destroy)
 
@@ -273,7 +275,8 @@ class BatchProgressDialog(tk.Toplevel):
     def _on_cancel(self):
         if self.on_cancel:
             self.on_cancel()
-        self.destroy()
+        self.current_label.config(text="İptal ediliyor...")
+        self.cancel_btn.config(state="disabled")
 
     def update_overall(self, completed: int):
         percent = (completed / self.total_files) * 100
@@ -285,6 +288,7 @@ class BatchProgressDialog(tk.Toplevel):
         self.current_label.config(text=filename)
 
     def set_complete(self):
+        self.grab_release()
         self.overall_var.set(100)
         self.current_label.config(text="Tamamlandı!")
-        self.cancel_btn.config(text="Kapat")
+        self.cancel_btn.config(text="Kapat", command=self.destroy)

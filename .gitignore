@@ -2,3 +2,10 @@ settings.json
 __pycache__
 
 downloads
+
+# VideoConverter local/generated files
+VideoConverter/build/
+VideoConverter/dist/
+VideoConverter/ffmpeg/
+VideoConverter/**/*.pyc
+VideoConverter/**/__pycache__/

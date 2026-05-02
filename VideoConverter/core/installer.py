@@ -4,6 +4,7 @@ import shutil
 import platform
 import os
 import sys
+import re
 import urllib.request
 import zipfile
 import tempfile
@@ -19,6 +20,8 @@ class Installer:
         "linux": None,  # Paket yöneticisi ile
         "darwin": None  # Homebrew ile
     }
+
+    MIN_FFMPEG_MAJOR = 4
 
     @staticmethod
     def get_app_dir() -> str:
@@ -55,7 +58,8 @@ class Installer:
                     timeout=5
                 )
                 version = result.stdout.split('\n')[0] if result.stdout else "Bilinmiyor"
-                return True, version
+                if Installer._is_supported_ffmpeg_version(version):
+                    return True, version
             except:
                 pass
 
@@ -70,11 +74,19 @@ class Installer:
                     timeout=5
                 )
                 version = result.stdout.split('\n')[0] if result.stdout else "Yerel kurulum"
-                return True, version
+                if Installer._is_supported_ffmpeg_version(version):
+                    return True, version
             except:
                 pass
 
-        return False, "FFmpeg bulunamadi"
+        return False, "FFmpeg bulunamadi veya desteklenen surum degil"
+
+    @staticmethod
+    def _is_supported_ffmpeg_version(version_line: str) -> bool:
+        match = re.search(r"ffmpeg version\s+([0-9]+)", version_line or "", re.IGNORECASE)
+        if not match:
+            return True
+        return int(match.group(1)) >= Installer.MIN_FFMPEG_MAJOR
 
     @staticmethod
     def install_ffmpeg(progress_callback: Optional[Callable] = None) -> Tuple[bool, str]:

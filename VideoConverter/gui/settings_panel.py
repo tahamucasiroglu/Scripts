@@ -488,6 +488,11 @@ class SettingsPanel(ttk.LabelFrame):
         vcodec = self.vcodec_var.get()
         acodec = self.acodec_var.get()
 
+        acodec_selection = self.acodec_combo.get()
+        if " - " in acodec_selection:
+            acodec = acodec_selection.split(" - ")[0]
+            self.acodec_var.set(acodec)
+
         settings = {
             "vcodec": vcodec,
             "acodec": acodec,

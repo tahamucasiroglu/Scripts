@@ -1,4 +1,7 @@
 """Hazır dönüştürme profilleri"""
+import json
+import os
+import sys
 from typing import Dict, Any, Optional
 
 # Preset yapısı
@@ -387,6 +390,37 @@ VIDEO_BITRATES = [
 AUDIO_BITRATES = [
     64, 96, 128, 160, 192, 224, 256, 320
 ]
+
+
+def load_json_presets():
+    """config/presets.json ve config/presets.d/*.json dosyalarini yukle."""
+    if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+        app_dir = sys._MEIPASS
+    else:
+        app_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    paths = [os.path.join(app_dir, "config", "presets.json")]
+    presets_dir = os.path.join(app_dir, "config", "presets.d")
+
+    if os.path.isdir(presets_dir):
+        paths.extend(
+            os.path.join(presets_dir, name)
+            for name in os.listdir(presets_dir)
+            if name.lower().endswith(".json")
+        )
+
+    for path in paths:
+        if not os.path.exists(path):
+            continue
+        try:
+            with open(path, "r", encoding="utf-8") as handle:
+                data = json.load(handle)
+            if isinstance(data, dict):
+                PRESETS.update(data.get("presets", data))
+        except (OSError, json.JSONDecodeError):
+            continue
+
+
+load_json_presets()
 
 
 def get_preset(name: str) -> Optional[Dict[str, Any]]:

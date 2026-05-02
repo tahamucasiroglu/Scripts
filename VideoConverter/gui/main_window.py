@@ -5,11 +5,12 @@ import os
 from typing import Optional, Dict, Any
 
 from core.ffmpeg_utils import FFmpegUtils
-from core.converter import VideoConverter
+from core.converter import VideoConverter, BatchConverter
 from core.presets import PRESETS, get_preset, get_all_preset_names
 from core.estimator import Estimator
+from core.i18n import I18N
 from .settings_panel import SettingsPanel
-from .progress_dialog import ProgressDialog
+from .progress_dialog import ProgressDialog, BatchProgressDialog
 
 
 class MainWindow:
@@ -17,8 +18,8 @@ class MainWindow:
 
     def __init__(self, nvenc_available: bool = False, nvenc_encoders: list = None):
         self.root = tk.Tk()
-        self.root.title("VideoConverter - Kapsamli Video Donusturucu")
-        self.root.geometry("750x700")
+        self.root.title("TM Video Converter - Taha Mucasiroglu Video Converter")
+        self.root.geometry("850x780")
         self.root.minsize(700, 650)
 
         # Durum değişkenleri
@@ -26,6 +27,9 @@ class MainWindow:
         self.nvenc_available = nvenc_available
         self.nvenc_encoders = nvenc_encoders or []
         self.converter = VideoConverter()
+        self.batch_converter = BatchConverter()
+        self.source_files = []
+        self.i18n = I18N(default_language="tr")
 
         # Stil
         self._setup_style()
@@ -57,7 +61,7 @@ class MainWindow:
 
         title_label = ttk.Label(
             title_frame,
-            text="VideoConverter",
+            text="TM Video Converter",
             font=("", 16, "bold")
         )
         title_label.pack(side="left")
@@ -67,6 +71,17 @@ class MainWindow:
         gpu_color = "green" if self.nvenc_available else "gray"
         self.gpu_label = ttk.Label(title_frame, text=gpu_text, foreground=gpu_color)
         self.gpu_label.pack(side="right")
+
+        self.language_var = tk.StringVar(value="tr")
+        self.language_combo = ttk.Combobox(
+            title_frame,
+            textvariable=self.language_var,
+            values=self.i18n.available_languages(),
+            state="readonly",
+            width=5
+        )
+        self.language_combo.pack(side="right", padx=10)
+        self.language_combo.bind("<<ComboboxSelected>>", self._on_language_change)
 
         # ==================== DOSYA SEÇİMİ ====================
         file_frame = ttk.LabelFrame(main_frame, text="Dosya Secimi", padding=10)
@@ -83,6 +98,23 @@ class MainWindow:
         self.source_entry.pack(side="left", fill="x", expand=True, padx=5)
 
         ttk.Button(source_frame, text="Sec...", command=self._select_source).pack(side="left")
+
+        batch_frame = ttk.Frame(file_frame)
+        batch_frame.pack(fill="x", pady=(8, 0))
+
+        ttk.Label(batch_frame, text="Paralel Is:", width=15).pack(side="left")
+        self.parallel_var = tk.IntVar(value=1)
+        self.parallel_spin = ttk.Spinbox(
+            batch_frame,
+            from_=1,
+            to=8,
+            textvariable=self.parallel_var,
+            width=5
+        )
+        self.parallel_spin.pack(side="left", padx=5)
+
+        self.queue_label = ttk.Label(batch_frame, text="Secili dosya: 0", foreground="gray")
+        self.queue_label.pack(side="left", padx=15)
 
         # Çıktı klasörü
         output_frame = ttk.Frame(file_frame)
@@ -175,17 +207,27 @@ class MainWindow:
     def _select_source(self):
         """Kaynak video seç"""
         filetypes = [
+            ("Medya Dosyalari", "*.ts *.m2ts *.mp4 *.mkv *.avi *.mov *.wmv *.flv *.webm *.mp3 *.wav *.m4a *.aac *.flac *.ogg"),
             ("Video Dosyalari", "*.ts *.m2ts *.mp4 *.mkv *.avi *.mov *.wmv *.flv *.webm"),
+            ("Ses Dosyalari", "*.mp3 *.wav *.m4a *.aac *.flac *.ogg"),
             ("Tum Dosyalar", "*.*")
         ]
-        path = filedialog.askopenfilename(filetypes=filetypes)
-        if path:
-            self.source_var.set(path)
-            self._load_video_info(path)
+        paths = filedialog.askopenfilenames(filetypes=filetypes)
+        if paths:
+            self.source_files = list(paths)
+            first_path = self.source_files[0]
+
+            if len(self.source_files) == 1:
+                self.source_var.set(first_path)
+            else:
+                self.source_var.set(f"{len(self.source_files)} dosya secildi")
+
+            self.queue_label.config(text=f"Secili dosya: {len(self.source_files)}")
+            self._load_video_info(first_path)
 
             # Çıktı klasörünü otomatik ayarla
             if not self.output_dir_var.get():
-                self.output_dir_var.set(os.path.dirname(path))
+                self.output_dir_var.set(os.path.dirname(first_path))
 
     def _select_output_dir(self):
         """Çıktı klasörü seç"""
@@ -247,6 +289,10 @@ class MainWindow:
         """Ayarlar değiştiğinde"""
         self._update_estimate()
 
+    def _on_language_change(self, event=None):
+        self.i18n.set_language(self.language_var.get())
+        self.status_label.config(text=self.i18n.t("ready"))
+
     def _update_estimate(self):
         """Tahmini güncelle"""
         if not self.video_info:
@@ -265,10 +311,17 @@ class MainWindow:
     def _start_convert(self):
         """Dönüştürmeyi başlat"""
         # Validasyon
-        source = self.source_var.get()
-        if not source or not os.path.exists(source):
+        sources = self.source_files or ([self.source_var.get()] if self.source_var.get() else [])
+        sources = [source for source in sources if source and os.path.exists(source)]
+        if not sources:
             messagebox.showerror("Hata", "Gecerli bir kaynak video secin!")
             return
+
+        if len(sources) > 1:
+            self._start_batch_convert(sources)
+            return
+
+        source = sources[0]
 
         output_dir = self.output_dir_var.get()
         if not output_dir:
@@ -337,6 +390,76 @@ class MainWindow:
         self.convert_btn.config(state="disabled")
         self.converter.convert(source, output_path, settings, duration)
 
+    def _start_batch_convert(self, sources):
+        output_dir = self.output_dir_var.get()
+        if not output_dir:
+            messagebox.showerror("Hata", "Cikti klasoru secin!")
+            return
+
+        if not os.path.exists(output_dir):
+            try:
+                os.makedirs(output_dir)
+            except Exception as e:
+                messagebox.showerror("Hata", f"Klasor olusturulamadi: {e}")
+                return
+
+        preset = get_preset(self.preset_var.get())
+        output_format = preset.get("output_format", ".mp4") if preset else ".mp4"
+        settings = self.settings_panel.get_settings()
+
+        if preset and preset.get("audio_only"):
+            settings["vcodec"] = None
+            settings["audio_only"] = True
+
+        self.batch_converter.clear_queue()
+        planned_outputs = set()
+        for source in sources:
+            output_path = self._make_output_path(source, output_dir, output_format, planned_outputs)
+            planned_outputs.add(output_path.lower())
+            self.batch_converter.add_to_queue(source, output_path, settings.copy())
+
+        self.batch_dialog = BatchProgressDialog(
+            self.root,
+            total_files=len(sources),
+            on_cancel=self._cancel_batch_convert
+        )
+
+        def on_batch_progress(completed, total, queue):
+            self.root.after(0, lambda: self.batch_dialog.update_overall(completed))
+
+        def on_item_progress(index, item, progress):
+            filename = os.path.basename(item["input"])
+            percent = progress.get("percent", item.get("progress", 0))
+            self.root.after(0, lambda: self.batch_dialog.update_current(filename, percent))
+
+        def on_batch_complete(queue):
+            self.root.after(0, lambda: self._on_batch_complete(queue))
+
+        self.batch_converter.set_callbacks(
+            batch_progress=on_batch_progress,
+            item_progress=on_item_progress,
+            complete=on_batch_complete
+        )
+
+        self.convert_btn.config(state="disabled")
+        self.status_label.config(text="Toplu donusturme calisiyor...")
+        self.batch_converter.start(max_workers=self.parallel_var.get())
+
+    def _make_output_path(self, source, output_dir, output_format, reserved=None):
+        reserved = reserved or set()
+        base_name = os.path.splitext(os.path.basename(source))[0]
+        candidate = os.path.join(output_dir, f"{base_name}_converted{output_format}")
+        counter = 2
+
+        while os.path.exists(candidate) or candidate.lower() in reserved:
+            candidate = os.path.join(output_dir, f"{base_name}_converted_{counter}{output_format}")
+            counter += 1
+
+        return candidate
+
+    def _cancel_batch_convert(self):
+        self.batch_converter.cancel()
+
     def _cancel_convert(self):
         """Dönüştürmeyi iptal et"""
         self.converter.cancel()
@@ -366,6 +489,31 @@ class MainWindow:
         """Dönüştürme hatası"""
         self.progress_dialog.set_error(error)
         self.convert_btn.config(state="normal")
+
+    def _on_batch_complete(self, queue):
+        completed = sum(1 for item in queue if item.get("status") == "completed")
+        failed = sum(1 for item in queue if item.get("status") == "failed")
+        cancelled = sum(1 for item in queue if item.get("status") == "cancelled")
+
+        self.batch_dialog.set_complete()
+        self.convert_btn.config(state="normal")
+        self.status_label.config(text="Hazir")
+
+        details = []
+        for item in queue:
+            if item.get("status") != "completed":
+                details.append(f"- {os.path.basename(item['input'])}: {item.get('error', item.get('status'))}")
+
+        message = (
+            f"Toplu donusturme tamamlandi.\n\n"
+            f"Basarili: {completed}\n"
+            f"Hatali: {failed}\n"
+            f"Iptal: {cancelled}"
+        )
+        if details:
+            message += "\n\nHatalar:\n" + "\n".join(details[:10])
+
+        messagebox.showinfo("Toplu Donusturme", message)
 
     @staticmethod
     def _format_time(seconds: float) -> str:

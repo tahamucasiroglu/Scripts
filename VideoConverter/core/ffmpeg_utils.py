@@ -454,8 +454,50 @@ Homebrew yoksa once onu kurun:
             return "FFmpeg'i sisteminize uygun sekilde kurun: https://ffmpeg.org/download.html"
 
     @staticmethod
-    def parse_progress(line: str, duration: float) -> Optional[Dict]:
+    def parse_progress(line: str, duration: float, state: Optional[Dict] = None) -> Optional[Dict]:
         """FFmpeg çıktısından ilerleme bilgisi parse et"""
+        if state is None:
+            state = {}
+
+        line = line.strip()
+        if not line:
+            return None
+
+        if "=" in line and not line.startswith("frame="):
+            key, value = line.split("=", 1)
+            value = value.strip()
+
+            try:
+                if key == "frame" and value.isdigit():
+                    state["frame"] = int(value)
+                elif key == "fps" and value not in ("N/A", ""):
+                    state["fps"] = float(value)
+                elif key in ("out_time_ms", "out_time_us") and value.isdigit():
+                    current_time = int(value) / 1_000_000
+                    state["current_time"] = current_time
+                    if duration > 0:
+                        state["percent"] = min(100, (current_time / duration) * 100)
+                elif key == "out_time":
+                    time_match = re.match(r"(\d+):(\d+):(\d+\.?\d*)", value)
+                    if time_match:
+                        h, m, s = time_match.groups()
+                        current_time = int(h) * 3600 + int(m) * 60 + float(s)
+                        state["current_time"] = current_time
+                        if duration > 0:
+                            state["percent"] = min(100, (current_time / duration) * 100)
+                elif key == "speed" and value not in ("N/A", ""):
+                    state["speed"] = float(value.rstrip("x"))
+                elif key == "total_size" and value.isdigit():
+                    state["size"] = int(value)
+                elif key == "progress":
+                    state["ffmpeg_progress"] = value
+                    if value == "end":
+                        state["percent"] = 100
+            except ValueError:
+                return None
+
+            return dict(state) if state else None
+
         progress = {}
 
         # frame= 1234 fps= 60 ... time=00:01:23.45 ...
